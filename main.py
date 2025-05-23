@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import tensorflow as tf
-from tensorflow.keras.models import load_model
+from tensorflow import keras
+load_model = keras.models.load_model
 from PIL import Image
 import numpy as np
 import h5py  # Library for editing HDF5 files
@@ -28,17 +29,25 @@ model = load_model(MODEL_PATH, compile=False)
 
 # Preprocessing function
 def preprocess_image(image, target_size):
+    image = image.convert("RGB")  # Ensure image is in RGB format
     image = image.resize(target_size)
     image = np.array(image) / 255.0  # Normalize
     image = np.expand_dims(image, axis=0)  # Add batch dimension
     return image
 
 # Streamlit UI
+st.set_page_config(page_title="Polyp Classification")
+
 set_background('./bgs/bg2.avif')
 st.title('Polyp classification')
 st.header("Upload an image and let the model predict!")
 
+st.sidebar.success("Change pages here.")# add side bar and change other page name with number_pageName to manually sort order
+
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
+
+if "table_data" not in st.session_state:
+    st.session_state["table_data"] = None
 
 if uploaded_file:
     image = Image.open(uploaded_file)
@@ -49,7 +58,10 @@ if uploaded_file:
 
     # Preprocess image
     processed_image = preprocess_image(image, target_size=(224, 224))  # Adjust based on model input size
-
+    #debug the image shape
+    print("Processed image shape:", processed_image.shape)
+    print("Model input shape:", model.input_shape)
+    print("Model loaded:", model is not None)
     # Get predictions
     predictions = model.predict(processed_image)
 
@@ -61,7 +73,6 @@ if uploaded_file:
 
     # Convert DataFrame to styled HTML table without the index column
     html_table = df.style.hide(axis="index").to_html()
+    st.session_state["table_data"] = html_table
+    st.write("**Analysis completed**")
 
-    # Display results in Streamlit using HTML
-    st.write("**Prediction Results:**", unsafe_allow_html=True)
-    st.write(html_table, unsafe_allow_html=True)
